@@ -243,7 +243,80 @@ app/
 
 ## 5. Uso de Redis
 
-TODO
+### 5.1 Cache de datos
+
+#### Estrategia: Cache-Aside (Lazy Loading)
+
+![diagrama lazy loading](./img/diagrama-lazy-loading.jpg)
+
+### 5.2 Manejo de Concurrencia
+
+#### Problema: Race Condition en Stock
+
+![problema concurrencia](./img/problema-concurrencia.jpg)
+
+#### Solucion: Doble Barrera (Redis Lock + PostgreSQL FOR UPDATE)
+
+![solucion concurrencia](./img/solucion-concurrencia.jpg)
+
+### 5.3 Optimizacion de Reportes
+
+#### Problema
+
+El endpoint de reportes ejecuta una consulta pesada que:
+
+- hace JOIN + COUNT(DISTINCT ...) + SUM(...)
+- recorre muchas filas del mes
+- puede tardar 2–5s y se repite muchas veces con los mismos parámetros
+
+**Consulta base (costosa)**
+
+```sql
+SELECT
+  p.category,
+  COUNT(DISTINCT o.id) AS orders,
+  SUM(oi.subtotal)     AS revenue
+FROM orders o
+JOIN order_items oi ON o.id = oi.order_id
+JOIN products p     ON oi.product_id = p.id
+WHERE o.created_at BETWEEN '2026-01-01' AND '2026-01-31'
+GROUP BY p.category
+ORDER BY revenue DESC;
+```
+
+**Impacto**
+
+- Latencia alta para usuarios (segundos).
+- Carga fuerte en PostgreSQL.
+- Picos de tráfico = riesgo de saturar la DB.
+
+**Objetivo**
+
+- Responder reportes repetidos en ~milisegundos.
+- Reducir carga en DB.
+- Mantener datos “suficientemente frescos”.
+
+#### Solucion
+
+```
+​GET /reports/sales?from=2026-01-01&to=2026-01-31
+```
+
+1. Generar la clave de cache
+
+- hash = md5("sales:2026-01-01:2026-01-31")[:8] = a3f2b1c0
+- Redis key final: report:sales:a3f2b1c0
+
+2. Leer primero desde Redis (HIT/MISS)
+
+- HIT (frecuente): retornar respuesta en ~0.1ms
+- MISS: ejecutar query (2–5s), guardar en Redis con TTL=10 min, y retornar
+
+3. Invalidación al cambiar datos (cuando se crea una orden)
+
+Cuando se crea una orden (o se cancela / edita), se invalida el cache:
+
+- simple: borrar “familia” de reportes report:sales:\*
 
 ## 6. Estrategia de Escalabilidad
 
