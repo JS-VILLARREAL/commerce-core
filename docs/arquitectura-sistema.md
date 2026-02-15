@@ -198,7 +198,48 @@ app/
 
 ## 4. Flujo de Creacion de Ordenes
 
-TODO
+### 4.1 Diagrama de Secuencia
+
+![diagrama secuencia](./img/diagrama-secuencia.jpg)
+
+### 4.2 Descripcion Paso a Paso
+
+**Fase 1 - Validacion de Entrada:** Nos aseguramos de que lo que envía el usuario tenga sentido antes de gastar recursos de base de datos.
+
+1. Envío del Request: El Cliente hace una petición POST /orders.
+2. Validación Pydantic: El Endpoint utiliza Pydantic para verificar que el JSON traiga los campos correctos. Si esto falla, el proceso muere aquí con un error 422, protegiendo al resto del sistema.
+
+**Fase 2 - Control de Concurrencia(Lock):** Aquí evitamos el problema de las peticiones duplicadas o colisiones de milisegundos.
+
+3. Llamada al Servicio: El endpoint le pasa la responsabilidad al OrderService, que contiene la lógica de negocio.
+4. SET NX en Redis: El servicio intenta poner un "candado" en Redis usando una operación llamada SET NX (Set if Not Exists).
+5. Confirmación: Si Redis responde OK, significa que nadie más está procesando esta orden específica en este momento. Es nuestra garantía de exclusividad.
+
+**Fase 3: Operación en Base de Datos (Transaccion):** Esta es la parte más crítica. Se ejecuta dentro de una transacción para que, si algo falla, no se guarde nada a medias.
+
+6.  Inicio de Transacción: Se abre una conexión segura con PostgreSQL.
+7.  Bloqueo Pesimista (SELECT FOR UPDATE): El servicio consulta el stock del producto pero le dice a la DB: "No dejes que nadie más lea o toque este stock hasta que yo termine". Esto evita que dos personas compren el último artículo al mismo tiempo.
+8.  Verificación: La DB confirma que hay stock disponible.
+9.  Escritura: Se resta el stock y se inserta la nueva orden con sus detalles.
+10. COMMIT: Se confirma la operación. En este punto, los cambios son permanentes y visibles para todos.
+
+**Fase 4: Finalización y Limpieza**
+
+11. Quitar Candado: Se borra la llave en Redis (DEL) para que el sistema quede libre para futuras operaciones relacionadas.
+12. Invalidar Cache: Si tenías una lista de productos en caché, ahora su stock es viejo. Se borra esa caché para forzar que la próxima vez se lea el dato nuevo de la DB.
+13. Respuesta Interna: El servicio confirma al endpoint que todo salió bien.
+14. Respuesta al Cliente: Se envía el HTTP 201 (Created). El usuario ve que su compra fue exitosa.
+
+### 4.3 Tabla de errores
+
+| Escenario          | Accion                            | HTTP |
+| ------------------ | --------------------------------- | ---- |
+| JSON invalido      | Pydantic rechaza                  | 422  |
+| Producto no existe | ProductNotFoundError              | 404  |
+| Stock insuficiente | InsufficientStockError + rollback | 409  |
+| Lock no disponible | StockLockError + liberar locks    | 409  |
+| Error de DB        | Rollback automatico + log         | 500  |
+| Redis caido        | Degradacion: proceder sin lock    | 200  |
 
 ## 5. Uso de Redis
 
