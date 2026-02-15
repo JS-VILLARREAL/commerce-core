@@ -32,12 +32,12 @@
 
 ## Tabla de Contenidos
 
-1. Diagrama de Flujo del Sistema
-2. Componentes Principales
-3. Justificacion del Stack Tecnologico
-4. Flujo de Creacion de Ordenes
-5. Uso de Redis
-6. Estrategia de Escalabilidad
+1. [Diagrama de Flujo del Sistema](#1-diagrama-de-flujo-del-sistema)
+2. [Componentes Principales](#2-componentes-principales)
+3. [Justificacion del Stack Tecnologico](#3-justificacion-del-stack-tecnologico)
+4. [Flujo de Creacion de Ordenes](#4-flujo-de-creacion-de-ordenes)
+5. [Uso de Redis](#5-uso-de-redis)
+6. [Estrategia de Escalabilidad](#6-estrategia-de-escalabilidad)
 
 ---
 
@@ -138,7 +138,63 @@ app/
 
 ## 3. Justificacion del Stack Tecnologico
 
-TODO
+### 3.1 Framework: FastAPI
+
+| Criterio              | FastAPI             | Flask          | Django REST     |
+| --------------------- | ------------------- | -------------- | --------------- |
+| **Rendimiento**       | Alto (async nativo) | Medio (sync)   | Medio           |
+| **Validacion**        | Pydantic integrado  | Manual         | DRF Serializers |
+| **Docs auto**         | OpenAPI/Swagger     | Manual         | Browsable API   |
+| **Async nativo**      | Si                  | Limitado       | Limitado        |
+| **Inyeccion de deps** | Built-in (Depends)  | Flask-Injector | Limitado        |
+
+**Decision:** FastAPI
+
+1. **Async nativo** para manejar miles de conexiones concurrentes.
+2. **Pydantic integrado** valida cada request antes de la logica de negocio.
+3. **Swagger auto-generado** desde type hints, acelera integracion con frontend.
+4. **`Depends()`** facilita la arquitectura hexagonal al inyectar repositorios y servicios.
+5. **Rendimiento** comparable a Node.js/Go (basado en Starlette + Uvicorn ASGI).
+
+### 3.2 Base de Datos: PostgreSQL
+
+| Criterio               | PostgreSQL                  | MySQL      | SQLite          |
+| ---------------------- | --------------------------- | ---------- | --------------- |
+| **Transacciones ACID** | Completo                    | Completo   | Parcial         |
+| **Concurrencia**       | MVCC avanzado               | Lock-based | Lock global     |
+| **Escalabilidad**      | Read replicas, partitioning | Buena      | Solo desarrollo |
+
+**Decision:** PostgreSQL
+
+1. **MVCC:** Lecturas no bloquean escrituras. Reportes corren mientras se procesan ordenes.
+2. **`SELECT FOR UPDATE`:** Lock a nivel de fila para proteger stock en ordenes.
+3. **DECIMAL:** Sin errores de punto flotante en precios.
+4. **Escalabilidad:** Read replicas + PgBouncer para alta concurrencia.
+
+### 3.3 ORM: SQLAlchemy (Async)
+
+| Criterio        | SQLAlchemy | SQLModel | Tortoise |
+| --------------- | ---------- | -------- | -------- |
+| **Madurez**     | 20+ anos   | Reciente | Medio    |
+| **Async**       | Si (v2.0+) | Parcial  | Nativo   |
+| **Migraciones** | Alembic    | Alembic  | Aerich   |
+
+**Decision:** SQLAlchemy 2.0+
+
+1. **AsyncSession** se integra con el event loop de FastAPI sin bloquear.
+2. **Unit of Work:** Control fino de transacciones para atomicidad en ordenes.
+3. **Alembic:** Migraciones versionadas y reversibles.
+
+### 3.4 Redis: Por que y Para que
+
+| Rol               | Problema sin Redis                                             | Solucion con Redis                                                      |
+| ----------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Cache**         | 1000 req/s, cada una query a PostgreSQL. DB se satura.         | `GET product:123` en ~0.1ms vs ~5ms de PostgreSQL.                      |
+| **Concurrencia**  | Dos usuarios compran el ultimo item. Stock queda negativo.     | `SET lock:stock:456 NX EX 30` — lock atomico distribuido.               |
+| **Rate Limiting** | Cliente abusivo con 10K req/s degrada el servicio.             | `INCR rate:ip` con TTL 60s. HTTP 429 si excede limite.                  |
+| **Reportes**      | Query de ventas escanea 100K registros. 50 usuarios = 5M rows. | Primer request cachea el resultado. Siguientes 49 lo obtienen en 0.1ms. |
+
+**Driver:** `redis.asyncio` para integracion nativa con el event loop.
 
 ## 4. Flujo de Creacion de Ordenes
 
