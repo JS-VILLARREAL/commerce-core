@@ -43,7 +43,13 @@
 
 ## 1. Diagrama de Flujo del Sistema
 
-TODO
+### 1.1 Arquitectura general
+
+![diagrama arquitectura](./img//Diagrama-flujo-sistema-draw.png)
+
+### 1.2 Flujo de una Request HTTP
+
+![diagrama flujo http](./img/flujo-request-http.png)
 
 ## 2. Componentes Principales
 
