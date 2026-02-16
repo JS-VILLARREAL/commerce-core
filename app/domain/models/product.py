@@ -15,6 +15,7 @@ class Product:
     sku: str = ""
     price: Decimal = Decimal("0")
     stock: int = 0
+    category: str = ""
     is_active: bool = True
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
