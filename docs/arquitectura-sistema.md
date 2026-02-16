@@ -320,4 +320,44 @@ Cuando se crea una orden (o se cancela / edita), se invalida el cache:
 
 ## 6. Estrategia de Escalabilidad
 
-TODO
+### 6.1 Miles de Ordenes por Minuto
+
+#### Nivel 1 — Optimizacion Vertical (1-5K ordenes/min)
+
+​
+![optimizacion vertical](./img/optimizacion-vertical.png)
+
+Acciones:
+
+- Uvicorn: 1 worker por CPU core (`--workers 8`)
+- Connection pooling: `pool_size=20, max_overflow=10`
+- Indices: `created_at`, `status`, `sku`, `category`
+- Cache agresivo en Redis con TTLs cortos
+- Verificar que no hay operaciones bloqueantes en el event loop
+
+#### Nivel 2 — Escalamiento Horizontal (5-50K ordenes/min)
+
+![escalamiento horizontal](./img/escalamiento-horizontal.png)
+
+Acciones:
+
+- Multiples instancias FastAPI detras de Nginx / AWS ALB
+- PgBouncer como connection pooler
+- Read Replicas para reportes
+- Redis Sentinel para alta disponibilidad
+
+#### Nivel 3 — Microservicios (50K+ ordenes/min)
+
+- Separar en servicios: Productos, Ordenes, Reportes
+- Event-driven con Redis Streams o RabbitMQ
+- CQRS: modelo de escritura separado del de lectura
+
+### 6.2 Lecturas Intensivas de Reportes
+
+| Estrategia              | Implementacion                          | Impacto                 |
+| ----------------------- | --------------------------------------- | ----------------------- |
+| Cache Redis             | Reportes cacheados con TTL 10min        | Reduce carga DB 90%+    |
+| Read replicas           | Reportes dirigidos a PostgreSQL replica | Primary solo escrituras |
+| Vistas materializadas   | PostgreSQL pre-calcula resultados       | Query en ms             |
+| Pre-calculo             | Background task regenera cada 5min      | Usuario nunca espera    |
+| Cursor-based pagination | `WHERE id > last_id` en vez de OFFSET   | Performance constante   |
