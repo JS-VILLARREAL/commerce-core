@@ -2,6 +2,6 @@
 name = "commerce-core"
 version = "1.0.0"
 
-[tool.poetry.ini_options]
+[tool.pytest.ini_options]
 asyncio = "auto"
 testpaths = ["tests"]
