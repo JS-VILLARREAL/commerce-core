@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, status
+from fastapi.security import OAuth2PasswordRequestForm
+
 
 from app.api.dependencies import get_current_user, get_user_service
 from app.domain.models.user import User
 from app.domain.services.user_service import UserService
-from app.schemas.user import TokenResponse, UserLogin, UserRegister, UserResponse
+from app.schemas.user import TokenResponse, UserRegister, UserResponse
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -22,11 +24,11 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    body: UserLogin,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     service: UserService = Depends(get_user_service),
 ):
     """Login and receive a JWT access token."""
-    token = await service.authenticate(body.email, body.password)
+    token = await service.authenticate(form_data.username, form_data.password)
     return TokenResponse(access_token=token)
 
 
