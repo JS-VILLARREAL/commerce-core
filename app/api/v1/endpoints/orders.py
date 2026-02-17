@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, status
 
-from app.api.dependencies import get_order_service
+from app.api.dependencies import get_current_user, get_order_service
 from app.domain.models.order import Order, OrderItem
+from app.domain.models.user import User
 from app.domain.services.order_service import OrderService
 from app.schemas.order import OrderCreate, OrderItemResponse, OrderResponse
 
@@ -11,6 +12,7 @@ router = APIRouter(prefix="/orders", tags=["Orders"])
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
     body: OrderCreate,
+    current_user: User = Depends(get_current_user),
     service: OrderService = Depends(get_order_service),
 ):
     """
@@ -36,6 +38,7 @@ async def create_order(
 @router.get("/{order_id}", response_model=OrderResponse)
 async def get_order(
     order_id: int,
+    current_user: User = Depends(get_current_user),
     service: OrderService = Depends(get_order_service),
 ):
     """Get order by ID with all items."""

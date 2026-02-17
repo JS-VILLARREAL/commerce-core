@@ -2,8 +2,9 @@ import math
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.api.dependencies import get_product_service
+from app.api.dependencies import get_current_user, get_product_service
 from app.domain.models.product import Product
+from app.domain.models.user import User
 from app.domain.services.product_service import ProductService
 from app.schemas.common import PaginatedResponse
 from app.schemas.product import ProductCreate, ProductResponse
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/products", tags=["Products"])
 @router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product(
     body: ProductCreate,
+    current_user: User = Depends(get_current_user),
     service: ProductService = Depends(get_product_service),
 ):
     """Create a new product."""
@@ -33,6 +35,7 @@ async def create_product(
 async def list_products(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    current_user: User = Depends(get_current_user),
     service: ProductService = Depends(get_product_service),
 ):
     """List products with pagination. Results are cached in Redis."""
