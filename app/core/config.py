@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Product Management API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
-    APP_V1_STR: str = "/api/v1"
+    API_V1_STR: str = "/api/v1"
 
     # Database settings
     DATABASE_URL: str = (
