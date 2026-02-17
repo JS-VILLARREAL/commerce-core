@@ -33,10 +33,10 @@ class OrderItemModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("orders.id"), ondelete="CASCADE"
+        Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False
     )
     product_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("products.id"), onupdate="CASCADE"
+        Integer, ForeignKey("products.id"), nullable=False, index=True
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
