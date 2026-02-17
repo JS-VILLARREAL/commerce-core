@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.services.product_service import ProductService
 from app.domain.services.order_service import OrderService
 
-# from app.domain.services.report_service import ReportService
+from app.domain.services.report_service import ReportService
 from app.infrastructure.cache.redis_cache_adapter import RedisCacheAdapter
 from app.infrastructure.cache.redis_client import get_redis
 from app.infrastructure.database.connection import get_db
@@ -41,9 +41,9 @@ async def get_order_service(
     )
 
 
-# async def get_report_service(
-#     db: AsyncSession = Depends(get_db),
-#     cache: RedisCacheAdapter = Depends(get_cache_adapter),
-# ) -> ReportService:
-#     repo = ProductRepository(db)
-#     return ReportService(product_repo=repo, cache=cache)
+async def get_report_service(
+    db: AsyncSession = Depends(get_db),
+    cache: RedisCacheAdapter = Depends(get_cache_adapter),
+) -> ReportService:
+    repo = ProductRepository(db)
+    return ReportService(product_repo=repo, cache=cache)
