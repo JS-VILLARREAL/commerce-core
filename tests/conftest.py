@@ -94,3 +94,25 @@ async def client(db_engine):
         yield c
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def auth_headers(client):
+    """Register and login a test user, return Authorization headers."""
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "testuser@example.com",
+            "password": "testpassword123",
+            "full_name": "Test User",
+        },
+    )
+    login_resp = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "testuser@example.com",
+            "password": "testpassword123",
+        },
+    )
+    token = login_resp.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
