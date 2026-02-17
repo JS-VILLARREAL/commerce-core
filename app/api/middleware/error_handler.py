@@ -6,9 +6,12 @@ from app.core.logging import get_logger
 from app.domain.exceptions import (
     DomainError,
     InsufficientStockError,
+    InvalidCredentialsError,
     OrderNotFoundError,
     ProductNotFoundError,
     StockLockError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
 )
 
 logger = get_logger(__name__)
@@ -16,8 +19,11 @@ logger = get_logger(__name__)
 _ERROR_MAP: dict[type, int] = {
     ProductNotFoundError: 404,
     OrderNotFoundError: 404,
+    UserNotFoundError: 404,
     InsufficientStockError: 409,
     StockLockError: 409,
+    UserAlreadyExistsError: 409,
+    InvalidCredentialsError: 401,
 }
 
 

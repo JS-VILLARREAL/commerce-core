@@ -34,3 +34,20 @@ class StockLockError(DomainError):
             f"Could not acquire lock for product {product_id}."
             f"Another operation is in process."
         )
+
+
+class UserNotFoundError(DomainError):
+    def __init__(self, email: str):
+        self.email = email
+        super().__init__(f"User with email {email} not found")
+
+
+class UserAlreadyExistsError(DomainError):
+    def __init__(self, email: str):
+        self.email = email
+        super().__init__(f"User with email {email} already exists")
+
+
+class InvalidCredentialsError(DomainError):
+    def __init__(self):
+        super().__init__("Invalid email or password")

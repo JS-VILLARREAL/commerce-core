@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     REDIS_PRODUCT_TTL: int = 300  # Cache TTL in seconds
     REDIS_REPORT_TTL: int = 600  # Cache TTL for reports in seconds
 
+    # JWT settings
+    JWT_SECRET_KEY: str = "your-256-bit-secret"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
     # Rate limiting settings
     RATE_LIMIT_PER_MINUTE: int = 60  # Max requests per minute per IP
 
